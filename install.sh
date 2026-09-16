@@ -55,6 +55,9 @@ link "git/.gitconfig" "$HOME/.gitconfig"
 echo "kitty"
 link "config/kitty" "$CONFIG_HOME/kitty"
 
+echo "nvim"
+link "config/nvim" "$CONFIG_HOME/nvim"
+
 echo "starship"
 link "config/starship.toml" "$CONFIG_HOME/starship.toml"
 
