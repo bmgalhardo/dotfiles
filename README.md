@@ -18,24 +18,23 @@ cd ~/Projects/dotfiles
 
 | Path in repo               | Links to                          | Tool |
 |----------------------------|-----------------------------------|------|
-| `zsh/.zshrc`               | `~/.zshrc`                         | zsh + oh-my-zsh |
-| `git/.gitconfig`           | `~/.gitconfig`                     | git |
-| `config/kitty/`            | `~/.config/kitty/`                 | kitty terminal |
-| `config/starship.toml`     | `~/.config/starship.toml`          | starship prompt (Catppuccin Mocha) |
-| `config/yazi/yazi.toml`    | `~/.config/yazi/yazi.toml`         | yazi file manager |
-| `config/zed/settings.json` | `~/.config/zed/settings.json`      | Zed editor |
-| `config/herdr/config.toml` | `~/.config/herdr/config.toml`      | herdr |
+| `config/fish/config.fish`  | `~/.config/fish/config.fish`      | fish shell |
+| `git/.gitconfig`           | `~/.gitconfig`                    | git |
+| `config/kitty/`            | `~/.config/kitty/`                | kitty terminal |
+| `config/starship.toml`     | `~/.config/starship.toml`         | starship prompt (Catppuccin Mocha) |
+| `config/yazi/yazi.toml`    | `~/.config/yazi/yazi.toml`        | yazi file manager |
+| `config/herdr/config.toml` | `~/.config/herdr/config.toml`     | herdr |
 
 Only declarative config is tracked. Runtime state (logs, sockets, sessions,
-lock files, `kitty.conf.default`, oh-my-zsh itself) is left out on purpose.
+lock files, `kitty.conf.default`) is keft out on purpose.
 
 ## Prerequisites
 
 Install these separately, then run `install.sh`:
 
-- [oh-my-zsh](https://ohmyz.sh)
+- [fish](https://fishshell.com)
 - [starship](https://starship.rs)
-- [kitty](https://sw.kovidgoyle.com/kitty/), [yazi](https://yazi-rs.github.io/), [Zed](https://zed.dev)
+- [kitty](https://sw.kovidgoyle.com/kitty/), [yazi](https://yazi-rs.github.io/)
 - A Nerd Font — the kitty config expects **Symbols Nerd Font Mono**
 
 ## Notes

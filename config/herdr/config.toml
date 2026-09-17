@@ -1,4 +1,8 @@
 onboarding = false
+
+[terminal]
+default_shell = "fish"
+
 [ui]
 agent_panel_sort = "spaces"
 

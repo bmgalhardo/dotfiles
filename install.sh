@@ -49,7 +49,7 @@ echo "config:   $CONFIG_HOME"
 echo
 
 echo "shell / git"
-link "zsh/.zshrc"   "$HOME/.zshrc"
+link "config/fish/config.fish"   "$CONFIG_HOME/fish/config.fish"
 link "git/.gitconfig" "$HOME/.gitconfig"
 
 echo "kitty"
@@ -64,15 +64,12 @@ link "config/starship.toml" "$CONFIG_HOME/starship.toml"
 echo "yazi"
 link "config/yazi" "$CONFIG_HOME/yazi"
 
-echo "zed"
-link "config/zed/settings.json" "$CONFIG_HOME/zed/settings.json"
-
 echo "herdr"
 link "config/herdr/config.toml" "$CONFIG_HOME/herdr/config.toml"
 
 echo
 echo "Done. Open a new shell to pick up zsh changes."
 echo "Prerequisites (install separately if missing):"
-echo "  - oh-my-zsh   https://ohmyz.sh"
+echo "  - fish        https://fishshell.com"
 echo "  - starship    https://starship.rs"
 echo "  - kitty, yazi, zed, a Nerd Font (Symbols Nerd Font Mono)"
