@@ -24,6 +24,7 @@ cd ~/Projects/dotfiles
 | `config/starship.toml`     | `~/.config/starship.toml`         | starship prompt (Catppuccin Mocha) |
 | `config/yazi/yazi.toml`    | `~/.config/yazi/yazi.toml`        | yazi file manager |
 | `config/herdr/config.toml` | `~/.config/herdr/config.toml`     | herdr |
+| `agents/AGENTS.md`         | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` | Claude Code and Codex user-level notes |
 
 Only declarative config is tracked. Runtime state (logs, sockets, sessions,
 lock files, `kitty.conf.default`) is keft out on purpose.
