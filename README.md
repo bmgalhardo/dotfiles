@@ -9,7 +9,6 @@ via [`install.sh`](./install.sh) — no submodules, no framework.
 git clone git@github.com:bmgalhardo/dotfiles.git ~/Projects/dotfiles
 cd ~/Projects/dotfiles
 ./install.sh          # or: DRY_RUN=1 ./install.sh  to preview
-GITCONFIG=1 ./install.sh  # also link ~/.gitconfig (off by default)
 ```
 
 `install.sh` is idempotent. Any existing real file is moved to
@@ -20,7 +19,7 @@ GITCONFIG=1 ./install.sh  # also link ~/.gitconfig (off by default)
 | Path in repo               | Links to                          | Tool |
 |----------------------------|-----------------------------------|------|
 | `config/fish/config.fish`  | `~/.config/fish/config.fish`      | fish shell |
-| `git/.gitconfig`           | `~/.gitconfig` (only with `GITCONFIG=1`) | git |
+| `git/.gitconfig`           | `~/.gitconfig`                    | git |
 | `config/kitty/`            | `~/.config/kitty/`                | kitty terminal |
 | `config/starship.toml`     | `~/.config/starship.toml`         | starship prompt (Catppuccin Mocha) |
 | `config/yazi/yazi.toml`    | `~/.config/yazi/yazi.toml`        | yazi file manager |

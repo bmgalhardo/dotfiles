@@ -6,3 +6,6 @@
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
+# Per-machine overrides (not tracked)
+[include]
+        path = ~/.gitconfig.local
