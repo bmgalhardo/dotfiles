@@ -43,6 +43,19 @@ link() {
   log "link: $dest -> $src"
 }
 
+# add_session_hook <hooks-json-file>: add the ctx L0 SessionStart hook once,
+# leaving every other hook in the file alone.
+add_session_hook() {
+  local f="$1" cmd='$HOME/.local/bin/ctx l0 --json'
+  if [ -f "$f" ] && jq -e --arg c "$cmd" '[.hooks.SessionStart[]?.hooks[]?.command] | index($c)' "$f" >/dev/null; then
+    log "ok:   $f (ctx hook)"
+    return
+  fi
+  run "mkdir -p '$(dirname "$f")'; [ -f '$f' ] || echo '{}' > '$f'"
+  run "jq --arg c '$cmd' '.hooks.SessionStart += [{hooks:[{type:\"command\",command:\$c}]}]' '$f' > '$f.tmp' && mv '$f.tmp' '$f'"
+  log "hook: $f (ctx l0)"
+}
+
 echo "dotfiles: $DOTFILES"
 echo "config:   $CONFIG_HOME"
 [ "$DRY_RUN" = "1" ] && echo "(dry run)"
@@ -67,9 +80,21 @@ link "config/yazi" "$CONFIG_HOME/yazi"
 echo "herdr"
 link "config/herdr/config.toml" "$CONFIG_HOME/herdr/config.toml"
 
+echo "agents (Claude Code, Codex)"
+link "bin/ctx"              "$HOME/.local/bin/ctx"
+link "config/agents/AGENTS.md" "$HOME/.claude/CLAUDE.md"
+link "config/agents/AGENTS.md" "$HOME/.codex/AGENTS.md"
+add_session_hook "$HOME/.claude/settings.json"
+add_session_hook "$HOME/.codex/hooks.json"
+if [ "$DRY_RUN" != "1" ] && [ "$("$DOTFILES/bin/ctx" use)" = "off" ]; then
+  log "ctx is off here (the default): the hook prints nothing. To use a context store:"
+  log "  ctx use personal && ctx setup"
+fi
+
 echo
 echo "Done. Open a new shell to pick up zsh changes."
 echo "Prerequisites (install separately if missing):"
 echo "  - fish        https://fishshell.com"
 echo "  - starship    https://starship.rs"
 echo "  - kitty, yazi, a Nerd Font (Symbols Nerd Font Mono)"
+echo "  - curl, jq; for ctx: ~/.config/context/env (CONTEXT_API) and ~/.config/context/token"

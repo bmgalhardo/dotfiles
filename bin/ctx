@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+# ctx: read and write a shared agent-context repo over the Forgejo API, no clone.
+# Runs on Linux and macOS (bash 3.2+, curl, jq).
+#
+# Profiles: one store per profile (e.g. personal, work). The active one is
+# $CONTEXT_PROFILE, else ~/.config/context/active, else "off": ctx does
+# nothing on a machine until `ctx use <profile>` turns it on.
+# A profile's config is ~/.config/context/<profile>/env and .../token,
+# written by `ctx setup` and never committed:
+#   CONTEXT_API=https://<forgejo>/api/v1/repos/<owner>/<repo>
+#   CONTEXT_CA=/path/to/ca.crt   (optional: a private CA the system doesn't trust)
+#   CONTEXT_GITHUB=<user>        (optional: whose public GitHub repos `repos` lists)
+# While off, the session hook prints nothing.
+set -euo pipefail
+
+BASE="${CONTEXT_HOME:-$HOME/.config/context}"
+if [ -n "${CONTEXT_PROFILE:-}" ]; then PROFILE="$CONTEXT_PROFILE"
+elif [ -r "$BASE/active" ]; then PROFILE=$(tr -d '[:space:]' < "$BASE/active")
+else PROFILE=off
+fi
+CONF="$BASE/$PROFILE"
+CACHE="${CONTEXT_CACHE:-$HOME/.cache/context}/$PROFILE"
+
+API="${CONTEXT_API:-}"
+CA="${CONTEXT_CA:-}"
+if [ -z "$API" ] && [ -r "$CONF/env" ]; then
+  # shellcheck disable=SC1091
+  . "$CONF/env"
+  API="${CONTEXT_API:-}"; CA="${CONTEXT_CA:-}"
+fi
+GH_USER="${CONTEXT_GITHUB:-}"
+TOKEN_FILE="${CONTEXT_TOKEN_FILE:-$CONF/token}"
+
+usage() {
+  cat <<'EOF'
+usage: ctx get [-r REPO] PATH   print a file (-r: from another repo, read only)
+       ctx ls [-r REPO] [DIR]   list a folder
+       ctx repos                list the repos you can read, with descriptions
+                                REPO is OWNER/NAME on this Forgejo, or github:OWNER/NAME (public)
+       ctx put PATH [-m MSG]    write stdin to PATH (creates or updates)
+       ctx rm PATH [-m MSG]     delete PATH
+       ctx l0 [--json]          print L0.md for a session start (falls back to the cache);
+                                --json wraps it as SessionStart additionalContext
+       ctx setup [URL]          configure the active profile (API URL, token, CA) and test it
+       ctx use [PROFILE|off]    show or switch the active profile; off (the default) disables ctx
+       ctx profiles             list configured profiles
+
+Set CONTEXT_PROFILE to pick a profile for one shell or one command.
+EOF
+  exit 2
+}
+
+die() { echo "ctx: $*" >&2; exit 1; }
+
+configured() { [ -n "$API" ] && { [ -n "${CONTEXT_TOKEN:-}" ] || [ -r "$TOKEN_FILE" ]; }; }
+
+token() {
+  if [ -n "${CONTEXT_TOKEN:-}" ]; then printf '%s' "$CONTEXT_TOKEN"; return; fi
+  [ -r "$TOKEN_FILE" ] || die "profile '$PROFILE' has no token: run \`ctx setup\`"
+  tr -d '[:space:]' < "$TOKEN_FILE"
+}
+
+api() { # METHOD PATH [JSON]
+  [ "$PROFILE" != off ] || die "ctx is off on this machine (\`ctx use <profile>\` to turn it on)"
+  [ -n "$API" ] || die "profile '$PROFILE' is not set up: run \`ctx setup\`"
+  local args=(-sS --fail-with-body --max-time 10 -X "$1" -H "Authorization: token $(token)")
+  [ -n "$CA" ] && args+=(--cacert "$CA")
+  [ $# -ge 3 ] && args+=(-H "Content-Type: application/json" --data-binary "$3")
+  curl "${args[@]}" "$API$2"
+}
+
+b64() { base64 | tr -d '\n'; }   # GNU wraps at 76 columns, BSD doesn't
+
+mtime() { # a file's modification time, GNU or BSD
+  date -r "$1" '+%F %R' 2>/dev/null || stat -f '%Sm' -t '%F %R' "$1"
+}
+
+path_enc() { jq -rn --arg p "$1" '$p | split("/") | map(@uri) | join("/")'; }
+
+sha_of() {
+  api GET "/contents/$(path_enc "$1")" 2>/dev/null \
+    | jq -r 'if type=="object" then .sha // empty else empty end' || true
+}
+
+msg_arg() { # PATH ACTION [-m MSG]
+  local p="$1" a="$2"; shift 2
+  if [ "${1:-}" = "-m" ] && [ -n "${2:-}" ]; then printf '%s' "$2"; else printf '%s %s' "$a" "$p"; fi
+}
+
+setup() {
+  [ "$PROFILE" != off ] || die "ctx is off on this machine: \`ctx use <profile>\` (e.g. personal, work) first"
+  local url="${1:-}" tok ca gh
+  echo "Profile: $PROFILE"
+  if [ -z "$url" ]; then
+    printf 'Context repo API URL (https://<forgejo>/api/v1/repos/<owner>/<repo>)%s: ' "${API:+ [$API]}"
+    read -r url
+    url="${url:-$API}"
+  fi
+  [ -n "$url" ] || die "no URL given"
+  url="${url%/}"
+
+  if [ -r "$TOKEN_FILE" ]; then printf 'Token (blank keeps the current one): '
+  else printf 'Forgejo token (repo read/write): '
+  fi
+  read -rs tok; echo
+  [ -n "$tok" ] || [ -r "$TOKEN_FILE" ] || die "no token given"
+
+  printf 'CA certificate file, if the system does not trust the server (blank for none)%s: ' "${CA:+ [$CA]}"
+  read -r ca
+  ca="${ca:-$CA}"
+  [ -z "$ca" ] || [ -r "$ca" ] || die "cannot read $ca"
+
+  printf 'GitHub user whose public repos `ctx repos` lists (blank for none)%s: ' "${GH_USER:+ [$GH_USER]}"
+  read -r gh
+  gh="${gh:-$GH_USER}"
+
+  # Test first, write only what works.
+  API="$url"; CA="$ca"
+  [ -z "$tok" ] || CONTEXT_TOKEN="$tok"
+  local repo
+  repo=$(api GET "" | jq -r '.full_name + (if .private then " (private)" else " (PUBLIC: anyone can read it)" end)') \
+    || die "could not read $url with that token; nothing saved"
+
+  mkdir -p "$CONF"
+  ( umask 077
+    { echo "CONTEXT_API=$url"; [ -z "$ca" ] || echo "CONTEXT_CA=$ca"
+      [ -z "$gh" ] || echo "CONTEXT_GITHUB=$gh"; } > "$CONF/env"
+    [ -z "$tok" ] || printf '%s\n' "$tok" > "$TOKEN_FILE" )
+  echo "ok: profile '$PROFILE' -> $repo"
+}
+
+use() {
+  if [ $# -eq 0 ]; then echo "$PROFILE"; return; fi
+  mkdir -p "$BASE"
+  printf '%s\n' "$1" > "$BASE/active"
+  case "$1" in
+    off) echo "ctx is off on this machine; session hooks print nothing" ;;
+    *) [ -r "$BASE/$1/env" ] && echo "active profile: $1" \
+         || echo "active profile: $1 (not set up yet: run \`ctx setup\`)" ;;
+  esac
+}
+
+host_api() { printf '%s' "${API%%/repos/*}"; }
+
+github() { # URL: public GitHub, no token
+  curl -sS --fail-with-body --max-time 10 -H "Accept: application/vnd.github+json" "$1"
+}
+
+cmd="${1:-}"; shift || true
+# get and ls read another repo on the same host with -r OWNER/REPO (read only:
+# changes to a project go through a clone, a branch and the user).
+GH_REPO=""
+if { [ "$cmd" = get ] || [ "$cmd" = ls ]; } && [ "${1:-}" = "-r" ]; then
+  [ -n "${2:-}" ] || usage
+  case "$2" in
+    github:*) GH_REPO="${2#github:}" ;;
+    *) [ -z "$API" ] || API="$(host_api)/repos/$2" ;;
+  esac
+  shift 2
+fi
+case "$cmd" in
+  get)
+    [ $# -ge 1 ] || usage
+    if [ -n "$GH_REPO" ]; then
+      curl -sS --fail-with-body --max-time 10 \
+        "https://raw.githubusercontent.com/$GH_REPO/HEAD/$(path_enc "$1")"
+    else
+      api GET "/raw/$(path_enc "$1")"
+    fi
+    ;;
+  ls)
+    if [ -n "$GH_REPO" ]; then
+      github "https://api.github.com/repos/$GH_REPO/contents/$(path_enc "${1:-}")"
+    else
+      api GET "/contents/$(path_enc "${1:-}")"
+    fi \
+      | jq -r 'if type=="array" then .[] | (if .type=="dir" then .path+"/" else .path end) else .path end'
+    ;;
+  put)
+    [ $# -ge 1 ] || usage
+    p="$1"; shift
+    content=$(b64)
+    sha=$(sha_of "$p")
+    if [ -n "$sha" ]; then
+      body=$(jq -n --arg c "$content" --arg s "$sha" --arg m "$(msg_arg "$p" update "$@")" \
+        '{content:$c, sha:$s, message:$m}')
+      api PUT "/contents/$(path_enc "$p")" "$body" | jq -r '"updated " + .content.path + " " + .commit.sha[0:7]'
+    else
+      body=$(jq -n --arg c "$content" --arg m "$(msg_arg "$p" add "$@")" '{content:$c, message:$m}')
+      api POST "/contents/$(path_enc "$p")" "$body" | jq -r '"created " + .content.path + " " + .commit.sha[0:7]'
+    fi
+    ;;
+  rm)
+    [ $# -ge 1 ] || usage
+    p="$1"; shift
+    sha=$(sha_of "$p"); [ -n "$sha" ] || die "$p not found"
+    body=$(jq -n --arg s "$sha" --arg m "$(msg_arg "$p" remove "$@")" '{sha:$s, message:$m}')
+    api DELETE "/contents/$(path_enc "$p")" "$body" | jq -r '"removed '"$p"' " + .commit.sha[0:7]'
+    ;;
+  l0)
+    # Never fails: a session start must not break because the store is away.
+    # Off, or never set up: print nothing, so sessions here carry no ctx noise.
+    if [ "$PROFILE" = off ] || ! configured; then exit 0; fi
+    mkdir -p "$CACHE"
+    if out=$(api GET "/raw/L0.md" 2>/dev/null); then
+      printf '%s\n' "$out" > "$CACHE/L0.md.tmp" && mv "$CACHE/L0.md.tmp" "$CACHE/L0.md"
+    elif [ -r "$CACHE/L0.md" ]; then
+      out="(context store '$PROFILE' unreachable: cached L0 from $(mtime "$CACHE/L0.md"))
+$(cat "$CACHE/L0.md")"
+    else
+      out="(context store '$PROFILE' unreachable and no cached L0)"
+    fi
+    if [ "${1:-}" = "--json" ]; then
+      jq -n --arg c "$out" '{hookSpecificOutput:{hookEventName:"SessionStart", additionalContext:$c}}'
+    else
+      printf '%s\n' "$out"
+    fi
+    ;;
+  repos)
+    rc=0
+    if [ "$PROFILE" != off ] && [ -n "$API" ]; then
+      API=$(host_api)
+      api GET "/user/repos?limit=50" \
+        | jq -r '.[] | .full_name + (if .private then " (private)" else "" end) + "  " + (.description // "")' \
+        || rc=1
+    fi
+    if [ -n "$GH_USER" ]; then
+      github "https://api.github.com/users/$GH_USER/repos?per_page=100&type=owner" \
+        | jq -r '.[] | select(.fork | not) | "github:" + .full_name + "  " + (.description // "")' \
+        || rc=1
+    fi
+    exit $rc
+    ;;
+  setup) setup "$@" ;;
+  use) use "$@" ;;
+  profiles)
+    for d in "$BASE"/*/; do [ -r "$d/env" ] && basename "$d"; done 2>/dev/null || true
+    ;;
+  *) usage ;;
+esac
