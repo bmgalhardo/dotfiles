@@ -67,10 +67,6 @@ link "config/yazi" "$CONFIG_HOME/yazi"
 echo "herdr"
 link "config/herdr/config.toml" "$CONFIG_HOME/herdr/config.toml"
 
-echo "agents (Claude Code and Codex share one file)"
-link "agents/AGENTS.md" "$HOME/.claude/CLAUDE.md"
-link "agents/AGENTS.md" "$HOME/.codex/AGENTS.md"
-
 echo
 echo "Done. Open a new shell to pick up zsh changes."
 echo "Prerequisites (install separately if missing):"
