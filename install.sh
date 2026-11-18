@@ -6,6 +6,7 @@
 # Usage:
 #   ./install.sh            # link everything
 #   DRY_RUN=1 ./install.sh  # show what would happen, change nothing
+#   GITCONFIG=1 ./install.sh  # also link ~/.gitconfig (skipped by default)
 
 set -euo pipefail
 
@@ -13,6 +14,7 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 STAMP="$(date +%Y%m%d%H%M%S)"
 DRY_RUN="${DRY_RUN:-0}"
+GITCONFIG="${GITCONFIG:-0}"
 
 log()  { printf '  %s\n' "$*"; }
 run()  { if [ "$DRY_RUN" = "1" ]; then log "DRY: $*"; else eval "$*"; fi; }
@@ -63,7 +65,11 @@ echo
 
 echo "shell / git"
 link "config/fish/config.fish"   "$CONFIG_HOME/fish/config.fish"
-link "git/.gitconfig" "$HOME/.gitconfig"
+if [ "$GITCONFIG" = "1" ]; then
+  link "git/.gitconfig" "$HOME/.gitconfig"
+else
+  log "skip: $HOME/.gitconfig (set GITCONFIG=1 to link it)"
+fi
 
 echo "kitty"
 link "config/kitty" "$CONFIG_HOME/kitty"

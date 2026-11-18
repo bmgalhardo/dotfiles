@@ -8,3 +8,9 @@ agent_panel_sort = "spaces"
 
 [experimental]
 kitty_graphics = true
+
+[keys]
+focus_agent = "prefix+shift+1..9"
+
+[ui.sidebar.agents]
+rows = [["state_icon", "machine", "workspace", "tab"], ["agent", "terminal_title_stripped"]]
