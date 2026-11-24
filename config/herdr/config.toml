@@ -3,10 +3,14 @@ onboarding = false
 [terminal]
 default_shell = "fish"
 
+[theme]
+name = "tokyo-night"
+
 [theme.custom]
-# Stronger highlight for the active workspace row and the focused agent row
-active_row_bg = "#3b4f7a"
-accent = "#89b4fa"
+# Tokyo Night palette: picked row = blue, cursor while switching = purple
+active_row_bg = "#33467c"
+selection_bg = "#6b4fa8"
+accent = "#7aa2f7"
 
 [ui]
 agent_panel_sort = "spaces"
