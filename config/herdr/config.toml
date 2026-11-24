@@ -31,3 +31,4 @@ rows = [["state_icon", { token = "machine", fg = "#8b919d" }, { token = "workspa
 # Same layout per agent; only the agent name color differs
 claude = [["state_icon", { token = "machine", fg = "#8b919d" }, { token = "workspace", bold = true, fg = "#b4befe" }, { token = "tab", fg = "#8b919d" }], [{ token = "agent", bold = true, fg = "#d97757" }, { token = "terminal_title_stripped", fg = "#abb2bf" }]]
 codex = [["state_icon", { token = "machine", fg = "#8b919d" }, { token = "workspace", bold = true, fg = "#b4befe" }, { token = "tab", fg = "#8b919d" }], [{ token = "agent", bold = true, fg = "#98c379" }, { token = "terminal_title_stripped", fg = "#abb2bf" }]]
+agy = [["state_icon", { token = "machine", fg = "#8b919d" }, { token = "workspace", bold = true, fg = "#b4befe" }, { token = "tab", fg = "#8b919d" }], [{ token = "agent", bold = true, fg = "#4285f4" }, { token = "terminal_title_stripped", fg = "#abb2bf" }]]
