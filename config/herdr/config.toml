@@ -3,6 +3,11 @@ onboarding = false
 [terminal]
 default_shell = "fish"
 
+[theme.custom]
+# Stronger highlight for the active workspace row and the focused agent row
+active_row_bg = "#3b4f7a"
+accent = "#89b4fa"
+
 [ui]
 agent_panel_sort = "spaces"
 
@@ -12,5 +17,8 @@ kitty_graphics = true
 [keys]
 focus_agent = "prefix+shift+1..9"
 
+[ui.sidebar.spaces]
+rows = [[{ token = "state_icon" }, { token = "workspace", bold = true }], ["branch", "git_status"]]
+
 [ui.sidebar.agents]
-rows = [["state_icon", "machine", "workspace", "tab"], ["agent", "terminal_title_stripped"]]
+rows = [["state_icon", "machine", { token = "workspace", bold = true }, "tab"], [{ token = "agent", bold = true }, "terminal_title_stripped"]]
