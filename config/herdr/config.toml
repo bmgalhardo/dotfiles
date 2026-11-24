@@ -7,10 +7,9 @@ default_shell = "fish"
 name = "one-dark"
 
 [theme.custom]
-# One Dark: picked row = lavender-tinted slate, cursor while switching = lighter slate, accent = soft yellow
 active_row_bg = "#4c5170"
 selection_bg = "#4b5263"
-accent = "#e5c07b"
+accent = "#b4befe"
 
 [ui]
 agent_panel_sort = "spaces"
